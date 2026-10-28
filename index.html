@@ -22,7 +22,9 @@ body{
         radial-gradient(circle at top left,#e50914 0%,transparent 25%),
         radial-gradient(circle at bottom right,#00a8ff 0%,transparent 25%),
         #050505;
-    overflow:hidden;
+    overflow-x:hidden;
+    overflow-y:auto;
+    min-height:100vh;
     color:white;
 }
 
@@ -35,6 +37,8 @@ body{
 .page{
     position:fixed;
     inset:0;
+    overflow-y:auto;
+    padding:24px 0;
     display:none;
     justify-content:center;
     align-items:center;
@@ -210,6 +214,43 @@ input::placeholder{
     height:100%;
 }
 
+
+.movie-menu{
+    width:min(94vw,1100px);
+    max-height:calc(100vh - 40px);
+    overflow-y:auto;
+    text-align:left;
+    padding:30px;
+}
+.movie-heading{text-align:center;margin-bottom:24px}
+.movie-heading h1{font-size:clamp(1.6rem,4vw,2.4rem);margin-bottom:8px}
+.movie-heading p{opacity:.78}
+.movie-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.movie-card{
+    overflow:hidden;border-radius:18px;background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.14);transition:transform .25s,border-color .25s;
+}
+.movie-card:hover{transform:translateY(-5px);border-color:rgba(0,255,149,.7)}
+.movie-poster{width:100%;height:250px;object-fit:cover;display:block;background:#171717}
+.movie-info{padding:17px}
+.movie-info h2{font-size:1.15rem;margin-bottom:7px}
+.movie-duration{display:inline-block;font-size:.8rem;color:#00ffab;margin-bottom:10px}
+.movie-description{font-size:.9rem;line-height:1.55;opacity:.82;min-height:66px;margin-bottom:16px}
+.movie-select{width:100%;padding:12px 16px;border-radius:11px}
+.back-link{display:block;margin:20px auto 0;background:transparent;color:#ddd;border:0;cursor:pointer}
+.player-page{width:min(95vw,1200px);max-height:calc(100vh - 40px);overflow-y:auto}
+.player-title{text-align:center;margin-bottom:14px}
+.player-title p{opacity:.8;margin-top:5px}
+.player-wrapper{width:100%;aspect-ratio:16/9;border-radius:20px;overflow:hidden;background:#111;box-shadow:0 30px 100px rgba(0,0,0,.7)}
+.player-wrapper iframe{width:100%;height:100%;border:0}
+@media(max-width:600px){
+ .glass{padding:28px 22px}
+ .movie-menu{padding:20px 15px}
+ .movie-poster{height:220px}
+ .confirm-container{height:450px}
+ .logo{font-size:2rem}
+}
+
 </style>
 </head>
 <body>
@@ -273,39 +314,28 @@ input::placeholder{
 
 </div>
 
-<!-- PAGINA 3 -->
-
+<!-- MENU DE FILMES -->
 <div class="page" id="page3">
-
-    <div class="glass success">
-
-        <h1>🍿 Bom Filme
-            (não chora...)
-        </h1>
-
-        <p id="nomeFinal"></p>
-
+  <div class="glass movie-menu">
+    <div class="movie-heading">
+      <h1>🍿 Escolha o filme</h1>
+      <p id="boasVindas">Prepare a pipoca e escolha o que vamos assistir.</p>
     </div>
-
+    <div class="movie-grid" id="movieGrid"></div>
+    <button class="back-link" onclick="voltarInicio()">← Voltar ao início</button>
+  </div>
 </div>
 
-<!-- PAGINA 4 -->
-
+<!-- PLAYER -->
 <div class="page" id="page4">
-
-    <div class="player-wrapper">
-
-        <iframe
-        src="https://ok.ru/videoembed/5585063250492?nochat=1"
-        frameborder="0"
-        allowfullscreen
-        allow="autoplay">
-        </iframe>
-
-        
-
+  <div class="player-page">
+    <div class="player-title">
+      <h1 id="selectedTitle">🎬 Bom filme!</h1>
+      <p id="selectedMeta"></p>
     </div>
-
+    <div class="player-wrapper" id="playerWrapper"></div>
+    <button class="back-link" onclick="mostrarPagina('page3')">← Voltar à escolha dos filmes</button>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
@@ -350,116 +380,156 @@ const frases = [
 ];
 
 let cliques = 0;
-
+let nomeVisitante = "";
 const simBtn = document.getElementById("sim");
 
-simBtn.addEventListener("click",clicouSim);
+/*
+  PERSONALIZE OS FILMES AQUI:
+  - title: nome do filme
+  - description: descrição/sinopse que você vai adicionar
+  - duration: duração do filme
+  - image: URL da imagem/poster
+  - video: URL de incorporação do player (iframe)
+*/
+const filmes = [
+  {
+    title: "Memórias de um Amor",
+    description: "Um casal luta para manter seu relacionamento unido enquanto um vírus que causa perda de memória se espalha e ameaça com destruir sua história de amor. descrição ou sinopse do primeiro filme.",
+    duration: "1h 41min",
+    image: "https://play-lh.googleusercontent.com/3qsQtzvxDd3o7jMiCrqlUGzlC55cNmzllSwVb_M7h7SX5JA5pCbkoKvRtvnKf4va8SzPnV5GqEwRVSX7mq0V",
+    video: "https://ok.ru/videoembed/5585063250492?nochat=1"
+  },
+  {
+    title: "Duna",
+    description: "Paul Atreides é um jovem prodígio com um futuro grandioso e envolto em mistério que precisa viajar para o planeta mais perigoso do universo para garantir o futuro de sua família e seu povo.",
+    duration: "2h 35min",
+    image: "https://cineset.com.br/wp-content/uploads/2021/10/duna-2020-dune-quadro-decorativo-a3-filme-duna-2020.jpg",
+    video: "https://redeflixapi.bar/filme/438631"
+  },
+  
+];
 
-function mostrarPagina(id){
+simBtn.addEventListener("click", clicouSim);
 
-    document.querySelectorAll(".page")
-    .forEach(page=>{
-        page.classList.remove("active");
-    });
-
-    document.getElementById(id)
-    .classList.add("active");
+function mostrarPagina(id) {
+    document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
 }
 
-function irPagina2(){
-
-    const nome =
-    document.getElementById("nome").value.trim();
-
-    if(!nome){
-
+function irPagina2() {
+    const nome = document.getElementById("nome").value.trim();
+    if (!nome) {
         alert("Digite seu nome.");
         return;
     }
+    nomeVisitante = nome;
+   const boasVindas = document.getElementById("boasVindas");
 
-    document.getElementById("nomeFinal")
-    .innerHTML = nome;
-
+    if (boasVindas) {
+        boasVindas.textContent =
+            `Boa escolha, ${nomeVisitante}! Agora escolha o filme para a nossa sessão.`;
+    }
+    cliques = 0;
+    document.getElementById("mensagem").textContent = frases[0];
+    document.getElementById("mensagem").style.fontSize = "1.8rem";
     mostrarPagina("page2");
-
     posicionarInicial();
 }
 
-function posicionarInicial(){
-
+function posicionarInicial() {
     simBtn.style.left = "50%";
     simBtn.style.top = "180px";
     simBtn.style.transform = "translateX(-50%)";
 }
 
-function voltarInicio(){
-
+function voltarInicio() {
     cliques = 0;
-
-    document.getElementById("mensagem")
-    .innerHTML = frases[0];
-
-    document.getElementById("mensagem")
-    .style.fontSize = "1.8rem";
-
+    document.getElementById("mensagem").textContent = frases[0];
+    document.getElementById("mensagem").style.fontSize = "1.8rem";
     mostrarPagina("page1");
 }
 
-function clicouSim(){
+function renderizarFilmes() {
+    const grid = document.getElementById("movieGrid");
+    grid.innerHTML = "";
+    filmes.forEach((filme, index) => {
+        const card = document.createElement("article");
+        card.className = "movie-card";
 
+        const poster = document.createElement("img");
+        poster.className = "movie-poster";
+        poster.src = filme.image;
+        poster.alt = `Pôster de ${filme.title}`;
+        poster.loading = "lazy";
+        poster.onerror = () => {
+            poster.removeAttribute("src");
+            poster.alt = "Adicione a URL da imagem do filme";
+            poster.style.display = "block";
+            poster.style.height = "250px";
+        };
+
+        const info = document.createElement("div");
+        info.className = "movie-info";
+        const title = document.createElement("h2");
+        title.textContent = filme.title;
+        const duration = document.createElement("span");
+        duration.className = "movie-duration";
+        duration.textContent = `◷ ${filme.duration}`;
+        const description = document.createElement("p");
+        description.className = "movie-description";
+        description.textContent = filme.description;
+        const button = document.createElement("button");
+        button.className = "btn btn-green movie-select";
+        button.textContent = "Assistir este filme";
+        button.addEventListener("click", () => abrirFilme(index));
+
+        info.append(title, duration, description, button);
+        card.append(poster, info);
+        grid.appendChild(card);
+    });
+}
+
+function abrirFilme(index) {
+    const filme = filmes[index];
+    document.getElementById("selectedTitle").textContent = `🎬 ${filme.title}`;
+    document.getElementById("selectedMeta").textContent = `${filme.duration} • Boa sessão, ${nomeVisitante}!`;
+    const wrapper = document.getElementById("playerWrapper");
+    wrapper.innerHTML = "";
+
+    if (!filme.video) {
+        wrapper.innerHTML = '<div style="height:100%;min-height:250px;display:grid;place-items:center;padding:25px;text-align:center;color:#ddd">Adicione o link do player deste filme no campo <strong>video</strong> da lista de filmes no código.</div>';
+    } else {
+        const iframe = document.createElement("iframe");
+        iframe.src = filme.video;
+        iframe.title = `Player: ${filme.title}`;
+        iframe.allowFullscreen = true;
+        iframe.allow = "autoplay; fullscreen; picture-in-picture";
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        wrapper.appendChild(iframe);
+    }
+    mostrarPagina("page4");
+}
+
+function clicouSim() {
     cliques++;
+    if (cliques < 3) {
+        const card = document.querySelector(".confirm-container");
+        const msg = document.getElementById("mensagem");
+        msg.textContent = frases[cliques];
+        msg.style.fontSize = (1.8 + cliques * .6) + "rem";
 
-    if(cliques < 3){
-
-        const card =
-        document.querySelector(".confirm-container");
-
-        const msg =
-        document.getElementById("mensagem");
-
-        msg.innerHTML = frases[cliques];
-
-        msg.style.fontSize =
-            (1.8 + cliques * .6) + "rem";
-
-        const msgX =
-            50 + Math.random() * 400;
-
-        const msgY =
-            20 + Math.random() * 90;
-
-        msg.style.left = msgX + "px";
-        msg.style.top = msgY + "px";
-        msg.style.transform = "none";
-
-        const largura =
-            card.clientWidth - 130;
-
-        const altura =
-            card.clientHeight - 120;
-
-        const x =
-            Math.random() * largura;
-
-        const y =
-            120 + Math.random() * 180;
-
-        simBtn.style.left = x + "px";
-        simBtn.style.top = y + "px";
+        const maxX = Math.max(10, card.clientWidth - 150);
+        const maxY = Math.max(120, card.clientHeight - 90);
+        simBtn.style.left = (10 + Math.random() * maxX) + "px";
+        simBtn.style.top = (120 + Math.random() * (maxY - 120)) + "px";
         simBtn.style.transform = "none";
-
-    }else{
-
+    } else {
+        renderizarFilmes();
         mostrarPagina("page3");
-
-        setTimeout(()=>{
-
-            mostrarPagina("page4");
-
-        },3000);
     }
 }
 
+renderizarFilmes();
 </script>
 
 </body>
